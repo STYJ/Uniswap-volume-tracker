@@ -1,3 +1,9 @@
+
+mod environment;
+
 fn main() {
-    println!("Hello, world!");
+
+    environment::load();
+    println!("{}", environment::get_value("MEANING_OF_LIFE"));
+
 }
