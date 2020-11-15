@@ -1,9 +1,9 @@
 
 mod environment;
+mod telegram;
 
-fn main() {
-
+#[tokio::main]
+async fn main() {
     environment::load();
-    println!("{}", environment::get_value("MEANING_OF_LIFE"));
-
+    telegram::start_bot().await;
 }
