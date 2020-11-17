@@ -8,10 +8,9 @@ edition = "2018"
 
 [dependencies]
 dotenv = "0.15.0"
-teloxide = "0.3"
-teloxide-macros = "0.3"
 
 log = "0.4.8"
-pretty_env_logger = "0.4.0"
-
+env_logger = "0.8.1"
 tokio = { version =  "0.2.11", features = ["rt-threaded", "macros"] }
+futures = "0.3.8"
+web3 = { git = "https://github.com/tomusdrw/rust-web3" }
