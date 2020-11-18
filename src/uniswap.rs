@@ -4,7 +4,7 @@ use super::environment;
 
 use web3::contract::Contract;
 use web3::futures::{future, StreamExt};
-use web3::types::{Address, FilterBuilder, Bytes};
+use web3::types::{Address, FilterBuilder, Bytes, H256};
 
 pub async fn poll() -> web3::contract::Result<()> {
     let url = environment::get_value("ALCHEMY");
@@ -37,12 +37,16 @@ pub async fn poll() -> web3::contract::Result<()> {
     sub.for_each(|log| {
         let log = log.unwrap();
         log::info!("Transaction hash: {:?}", log.transaction_hash.unwrap());
-        let from = log.topics[1];
-        let to = log.topics[2];
-        
-        log::info!("{:?} -> {:?} ", from, to);
+        let H256(from) = log.topics[1];
+        let H256(to) = log.topics[2];
+        // I don't really need to know To and From. I just need to be able to parse the data.
+        // amount0 = Uni, amount1 = Token
+        // either 1, 4 or 2, 3.
+        // 1, 4 means sell uni for eth
+        // 2, 3 means buy uni with eth 
+        log::info!("0x{} -> 0x{} ", hex::encode(&from[12..]), hex::encode(&to[12..]));
         let Bytes(data) = log.data;
-        log::info!("{:?}", data);
+        log::info!("{}", hex::encode(&data));
         future::ready(())
     })
     .await;
