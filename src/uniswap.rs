@@ -4,7 +4,7 @@ use super::environment;
 
 use web3::contract::Contract;
 use web3::futures::{future, StreamExt};
-use web3::types::{Address, FilterBuilder, Bytes, H256};
+use web3::types::{Address, FilterBuilder, Bytes, U256};
 
 pub async fn poll() -> web3::contract::Result<()> {
     let url = environment::get_value("ALCHEMY");
@@ -37,16 +37,24 @@ pub async fn poll() -> web3::contract::Result<()> {
     sub.for_each(|log| {
         let log = log.unwrap();
         log::info!("Transaction hash: {:?}", log.transaction_hash.unwrap());
-        let H256(from) = log.topics[1];
-        let H256(to) = log.topics[2];
-        // I don't really need to know To and From. I just need to be able to parse the data.
-        // amount0 = Uni, amount1 = Token
-        // either 1, 4 or 2, 3.
-        // 1, 4 means sell uni for eth
-        // 2, 3 means buy uni with eth 
-        log::info!("0x{} -> 0x{} ", hex::encode(&from[12..]), hex::encode(&to[12..]));
+        // let H256(from) = log.topics[1];
+        // let H256(to) = log.topics[2];
+        // log::info!("0x{} -> 0x{} ", hex::encode(&from[12..]), hex::encode(&to[12..]));
+
+
         let Bytes(data) = log.data;
-        log::info!("{}", hex::encode(&data));
+        let uni_in: U256 = data[..32].into();
+        let eth_in: U256 = data[32..64].into();
+        let uni_out: U256 = data[64..96].into();
+        let eth_out: U256 = data[96..].into();
+
+        //  / U256::from(10).pow(U256::from(18))
+        if uni_in > U256::from(0) {
+            log::info!("{:?} UNI -> {:?} ETH", uni_in, eth_out);
+        } else {
+            log::info!("{:?} ETH -> {:?} UNI", eth_in, uni_out);
+        }
+
         future::ready(())
     })
     .await;
