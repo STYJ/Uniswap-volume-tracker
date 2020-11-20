@@ -4,25 +4,32 @@ use super::environment;
 
 use web3::contract::Contract;
 use web3::futures::{future, StreamExt};
-use web3::types::{Address, FilterBuilder, Bytes, U256, Log};
+use web3::types::{Address, FilterBuilder, Bytes, H256, U256, U64};
 
 use std::collections::VecDeque;
 
 #[derive(Debug)]
 struct MovingSum {
     interval: u64,
-    logs: VecDeque<Log>,  // Not to be confused with `log`
+    logs: VecDeque<MinimalTx>,  // Not to be confused with `log::info!...`
     sum: U256,
 }
 
+#[derive(Debug)]
+struct MinimalTx {
+    hash: H256,
+    block: U64,
+    qty: U256,
+}
+
 pub async fn poll() -> web3::contract::Result<()> {
-    let url = environment::get_value("ALCHEMY");
+    let url = environment::get_value("INFURA");
     let transport = web3::transports::WebSocket::new(&url).await?;
     let web3 = web3::Web3::new(transport);
 
     // TODO: Refactor constants into separate file
     let token_name = "UNI";
-    let token_decimals = 18;
+    let _token_decimals = 18;
     let token_address: Address = "1f9840a85d5aF5bf1D1762F925BDADdC4201F984".parse().unwrap();
     let _uni_router_address: Address = "7a250d5630B4cF539739dF2C5dAcb4c659F2488D".parse().unwrap();
     let token_eth_pair_address: Address = "d3d2E2692501A5c9Ca623199D38826e513033a17".parse().unwrap();
@@ -60,37 +67,61 @@ pub async fn poll() -> web3::contract::Result<()> {
             None,
         )
         .build();
-    log::info!("Commencing logger");
-    log::info!("-------------------");
-    log::info!("Token name    : {}", token_name);
-    log::info!("Token address : 0x{}", token_address);
-    log::info!("-------------------");
-
+    println!("Commencing logger");
+    println!("-------------------");
+    println!("Token name    : {}", token_name);
+    println!("Token address : 0x{}", token_address);
+    println!("-------------------");
 
     let sub = web3.eth_subscribe().subscribe_logs(filter).await?;
     sub.for_each(|log| {
         let log = log.unwrap();
-        // TODO: 1 VecDeque for log for buys
-        // TODO: 1 VecDequeu for log for sells
-        // TODO: 1 U256 for sum buys
-        // TODO: 1 U256 for sum sells
 
-
-        
-        log::info!("Tx hash : {:?}", log.transaction_hash.unwrap());
-        
         let Bytes(data) = log.data;
         let uni_sold: U256 = data[..32].into();
         let uni_bought: U256 = data[64..96].into();
+        let mut latest_tx = MinimalTx{
+            hash: log.transaction_hash.unwrap(),
+            block: log.block_number.unwrap(),
+            qty: U256::from(0),
+        };
 
-        let action: String = if uni_sold > U256::from(0) { "Sold    ".into() } else { "Bought  ".into() };
-        let qty = if uni_sold > U256::from(0) { uni_sold } else { uni_bought };
-        // Shadowing variable to make code more readable.
-        let qty = qty / U256::from(10).pow(U256::from(token_decimals));
-        log::info!("{}: {:?} UNI", action, qty);
-
+        if uni_sold > U256::from(0) {
+            latest_tx.qty = uni_sold;
+            update_ms(&mut ten_blocks_sell_ms, latest_tx);
+        } else {
+            latest_tx.qty = uni_bought;
+            update_ms(&mut ten_blocks_buy_ms, latest_tx);
+        }
         future::ready(())
     })
     .await;
     Ok(())
+}
+
+fn update_ms(moving_sum: &mut MovingSum, minimal_tx: MinimalTx) {
+    // Destructure before moving minimal_tx into queue
+    let MinimalTx{hash: _, block: last_block, qty} = minimal_tx;
+
+    // Add log to queue
+    moving_sum.logs.push_back(minimal_tx);
+
+    // Update sum
+    moving_sum.sum += qty;
+
+    // Calculate if the diff in block number between
+    // last log and first log is > interval
+    // if diff > interval, pop first and repeat until diff is < interval
+    loop {
+        let first = moving_sum.logs.front_mut().unwrap();
+        let first_block = first.block;
+        let first_qty = first.qty;
+        let block_diff = last_block - first_block;
+        if block_diff > U64::from(moving_sum.interval) {
+            moving_sum.logs.pop_front();
+            moving_sum.sum -= first_qty;
+        } else {
+            break;
+        }
+    };
 }
