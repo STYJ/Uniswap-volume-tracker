@@ -32,9 +32,10 @@ pub async fn poll() -> web3::contract::Result<()> {
     println!("Token address : 0x{}", TOKEN_ADDRESS);
     println!("-------------------");
 
-    let (mut buy_moving_sum, mut sell_moving_sum) = init_moving_sums();
-    add_past_transactions_to_moving_sums(&mut buy_moving_sum, &mut sell_moving_sum, &web3).await?;
-    subscribe(&mut buy_moving_sum, &mut sell_moving_sum, &web3).await?;
+    // let (mut buy_moving_sum, mut sell_moving_sum) = init_moving_sums();
+    // add_past_transactions_to_moving_sums(&mut buy_moving_sum, &mut sell_moving_sum, &web3).await?;
+    // subscribe(&mut buy_moving_sum, &mut sell_moving_sum, &web3).await?;
+    get_unique_interval_combinations();
     Ok(())
 }
 
@@ -151,4 +152,20 @@ fn add(moving_sum: &mut MovingSum, minimal_tx: MinimalTx) {
             break;
         }
     }
+}
+
+fn get_unique_interval_combinations() -> VecDeque<(u64, u64)> {
+    let num_intervals = INTERVALS.len();
+    let mut i = 0;
+    let mut j = 1;
+    let mut combinations: VecDeque<(u64, u64)> = VecDeque::new();
+    while i < num_intervals && j < num_intervals && i < j {
+        combinations.push_back((INTERVALS[i], INTERVALS[j]));
+        j += 1;
+        if(j == num_intervals) {
+            i += 1;
+            j = i + 1;
+        }
+    }
+    combinations
 }

@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 use web3::types::{H256, U256, U64};
 
-
 pub const TOKEN_NAME: &str = "UNI";
 pub const _TOKEN_DECIMALS: i32 = 18;
 pub const TOKEN_ADDRESS: &str = "1f9840a85d5aF5bf1D1762F925BDADdC4201F984";
