@@ -7,9 +7,12 @@ use constants::*;
 
 use web3::contract::Contract;
 use web3::futures::{future, StreamExt};
-use web3::types::{Address, BlockNumber, Bytes, Filter, FilterBuilder, Log, H256, U256, U64};
+use web3::types::{Address, BlockNumber, Bytes, FilterBuilder, Log, U256, U64};
 
 extern crate hex;
+
+// TODO: Compare sum between intervals
+// TODO: Notify on telegram if any intervals are breached
 
 pub async fn poll() -> web3::contract::Result<()> {
     let url = environment::get_value("INFURA");
@@ -57,7 +60,6 @@ async fn add_past_transactions_to_moving_sums(
     web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> web3::contract::Result<()> {
     println!("2. Querying past events...");
-
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
     let mut curr_block = web3.eth().block_number().await?;
     let mut from_block = curr_block - U64::from(*INTERVALS.last().unwrap());
@@ -82,7 +84,7 @@ async fn add_past_transactions_to_moving_sums(
             )
             .build();
         let events = web3.eth().logs(filter).await?;
-        for log in events {    
+        for log in events {
             push_log_to_ms(buy_moving_sum, sell_moving_sum, log);
         }
         from_block += U64::from(NUM_BLOCKS_PER_QUERY);
@@ -91,14 +93,12 @@ async fn add_past_transactions_to_moving_sums(
     Ok(())
 }
 
-
 async fn subscribe(
     buy_moving_sum: &mut MovingSum,
     sell_moving_sum: &mut MovingSum,
-    web3: &web3::Web3<web3::transports::WebSocket>
+    web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> web3::contract::Result<()> {
     println!("3. Listening for new events...");
-
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
     let filter = FilterBuilder::default()
         .address(vec![token_eth_pair_address])
@@ -113,7 +113,6 @@ async fn subscribe(
     sub.for_each(|log| {
         let log = log.unwrap();
         push_log_to_ms(buy_moving_sum, sell_moving_sum, log);
-        println!("{:?}", sell_moving_sum);
         future::ready(())
     })
     .await;
@@ -124,7 +123,7 @@ fn push_log_to_ms(buy_moving_sum: &mut MovingSum, sell_moving_sum: &mut MovingSu
     let Bytes(data) = log.data;
     let uni_sold: U256 = data[..32].into();
     let uni_bought: U256 = data[64..96].into();
-    let mut latest_tx = MinimalTx{
+    let mut latest_tx = MinimalTx {
         hash: log.transaction_hash.unwrap(),
         block: log.block_number.unwrap(),
         qty: U256::from(0),
@@ -137,12 +136,10 @@ fn push_log_to_ms(buy_moving_sum: &mut MovingSum, sell_moving_sum: &mut MovingSu
         latest_tx.qty = uni_bought;
         add(buy_moving_sum, latest_tx);
     }
-
 }
 
 fn add(moving_sum: &mut MovingSum, minimal_tx: MinimalTx) {
     moving_sum.logs.push_back(minimal_tx);
-
     // Remove transactions that fall outside of latest block number - interval
     loop {
         let first_block = moving_sum.logs.front().unwrap().block;
