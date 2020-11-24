@@ -37,7 +37,7 @@ pub async fn poll() -> web3::contract::Result<()> {
 
     add_past_transactions(&mut buy_logs, &mut sell_logs, &web3).await?;
     subscribe(&mut buy_logs, &mut sell_logs, &web3).await?;
-    get_unique_interval_combinations();
+    get_interval_index_pairs();
     Ok(())
 }
 
@@ -162,7 +162,7 @@ fn add_and_pop(logs: &mut VecDeque<MinimalTx>, minimal_tx: MinimalTx) {
 //     sums
 // }
 
-fn get_unique_interval_combinations() -> VecDeque<(u64, u64)> {
+fn get_interval_index_pairs() -> VecDeque<(u64, u64)> {
     let mut i: u64 = 0;
     let mut j: u64 = 1;
     let mut combinations: VecDeque<(u64, u64)> = VecDeque::new();
