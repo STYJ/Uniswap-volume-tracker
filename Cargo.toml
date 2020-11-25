@@ -10,7 +10,7 @@ edition = "2018"
 dotenv = "0.15.0"
 
 log = "0.4.8"
-env_logger = "0.8.1"
+pretty_env_logger = "0.4.0"
 tokio = { version =  "0.2.11", features = ["rt-threaded", "macros"] }
 futures = "0.3.8"
 web3 = { git = "https://github.com/tomusdrw/rust-web3" }
