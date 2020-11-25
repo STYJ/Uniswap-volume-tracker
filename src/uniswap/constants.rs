@@ -7,9 +7,9 @@ pub const _UNI_ROUTER_ADDRESS: &str = "7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
 pub const TOKEN_ETH_PAIR_ADDRESS: &str = "d3d2E2692501A5c9Ca623199D38826e513033a17";
 pub const EVENT_SIGNATURE_HASH: &str = "d78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
 
-pub const NUM_INTERVALS: usize = 3;
-pub const INTERVALS: [u64; NUM_INTERVALS] = [10, 100, 1000];  // ~2.1 mins, ~21 mins, 3.6 hours
-pub const NUM_BLOCKS_PER_QUERY: i8 = 100;
+pub const NUM_INTERVALS: usize = 4;
+pub const INTERVALS: [u64; NUM_INTERVALS] = [10, 100, 1000, 10000];  // ~2.1 mins, ~21 mins, 3.6 hrs, 36 hours
+pub const NUM_BLOCKS_PER_QUERY: i32 = 1000;
 
 #[derive(Debug, Copy, Clone)]
 pub struct MinimalTx {

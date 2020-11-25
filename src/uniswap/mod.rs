@@ -20,7 +20,7 @@ extern crate hex;
 // c. Upgrade `get_sums_for_each_interval` to use latest blockchain block instead of latest transaction recorded in logs
 
 pub async fn poll() -> web3::contract::Result<()> {
-    let url = environment::get_value("INFURA");
+    let url = environment::get_value("ALCHEMY");
     let transport = web3::transports::WebSocket::new(&url).await?;
     let web3 = web3::Web3::new(transport);
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
@@ -109,9 +109,6 @@ async fn subscribe(
         // TODO task a
         let buy_sums = get_sums_for_each_interval(buy_logs);
         let sell_sums = get_sums_for_each_interval(sell_logs);
-
-        // println! {"{:?}", buy_logs};
-        // println! {"{:?}", sell_logs};
         compare_same_type("buy", &pairs, &buy_sums);
         compare_same_type("sell", &pairs, &sell_sums);
         compare_diff_type(&buy_sums, &sell_sums);
@@ -171,7 +168,6 @@ fn get_sums_for_each_interval(logs: &VecDeque<MinimalTx>) -> [U256; NUM_INTERVAL
     // instead of the latest blockchain block!
     let latest_block = latest.block;
     let mut sum = latest.qty;
-    println!("{}, {} = {:?}", i, j, sum);
     while i < logs.len() && j < INTERVALS.len() {
         let curr = logs[i];
         let curr_block = curr.block;
@@ -179,7 +175,6 @@ fn get_sums_for_each_interval(logs: &VecDeque<MinimalTx>) -> [U256; NUM_INTERVAL
         if block_diff <= U64::from(INTERVALS[j]) {
             sum += curr.qty;
             i += 1;
-            println!("{}, {} = {:?}", i, j, sum);
         } else {
             sums[j] = sum;
             j += 1;
@@ -223,7 +218,7 @@ fn compare_same_type(
         let b_vol = sums[*b] / U256::from(10).pow(U256::from(b - a));
         if a_vol > b_vol {
             println!(
-                "{0} block {1} ({2} {3}) > {4} block buy (averaged to {0} blocks, {5} {3})",
+                "{0} block {1} ({2} {3}) > {4} block {1} (averaged to {0} blocks, {5} {3})",
                 a_blocks,
                 verb,
                 a_vol / U256::from(10).pow(U256::from(TOKEN_DECIMALS)),
