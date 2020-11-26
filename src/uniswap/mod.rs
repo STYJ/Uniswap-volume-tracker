@@ -163,7 +163,7 @@ fn get_sums_for_each_interval(logs: &VecDeque<MinimalTx>) -> [U256; NUM_INTERVAL
     // instead of the latest blockchain block!
     let latest_block = latest.block;
     let mut sum = latest.qty;
-    while i < logs.len() && j < INTERVALS.len() {
+    while i < logs.len() && j < NUM_INTERVALS {
         let curr = logs[i];
         let curr_block = curr.block;
         let block_diff = latest_block - curr_block;
