@@ -30,11 +30,11 @@ pub async fn poll() -> web3::contract::Result<()> {
         include_bytes!("../build/IUniswapV2Pair.abi"),
     )?;
 
-    info!("Commencing logger");
-    info!("-------------------");
-    info!("Token name    : {}", TOKEN_NAME);
-    info!("Token address : 0x{}", TOKEN_ADDRESS);
-    info!("-------------------");
+    println!("Commencing logger");
+    println!("-------------------");
+    println!("Token name    : {}", TOKEN_NAME);
+    println!("Token address : 0x{}", TOKEN_ADDRESS);
+    println!("-------------------");
 
     let mut buy_logs: VecDeque<MinimalTx> = VecDeque::new();
     let mut sell_logs: VecDeque<MinimalTx> = VecDeque::new();
@@ -50,14 +50,14 @@ async fn add_past_transactions(
     sell_logs: &mut VecDeque<MinimalTx>,
     web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> web3::contract::Result<()> {
-    info!("1. Querying past events...");
+    println!("1. Querying past events...");
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
     let mut curr_block = web3.eth().block_number().await?;
     let mut from_block = curr_block - U64::from(*INTERVALS.last().unwrap());
 
     // Runs web3 queries in batches of QUERY_BLOCK_INTERVAL (100) transactions
     while from_block < curr_block {
-        info!(".");
+        println!(".");
         let mut to_block = from_block + NUM_BLOCKS_PER_QUERY;
         // To make sure to_block doesn't ever exceed the latest block number. Is this needed though? Hmm..
         if to_block > curr_block {
@@ -90,7 +90,7 @@ async fn subscribe(
     sell_logs: &mut VecDeque<MinimalTx>,
     web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> web3::contract::Result<()> {
-    info!("2. Listening for new events...");
+    println!("2. Listening for new events...");
     let pairs = get_interval_index_pairs();
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
     let filter = FilterBuilder::default()
@@ -217,7 +217,7 @@ fn compare_same_type(
         let a_vol = sums[*a];
         let b_vol = sums[*b] / U256::from(10).pow(U256::from(b - a));
         if a_vol > b_vol {
-            info!(
+            println!(
                 "{0} block {1} ({2} {3}) > {4} block {1} (averaged to {0} blocks, {5} {3})",
                 a_blocks,
                 verb,
@@ -239,7 +239,7 @@ fn compare_diff_type(
         // Note that I'm only printing if buy is > sell because I'm only interested in that lol.
         // If it doesn't print, you can assume the opposite is true i.e. sell > buy.
         if buy_sums[i] > sell_sums[i] {
-            info!(
+            println!(
                 "{0} block buy ({1} {2}) > {0} block sell ({3} {2})",
                 INTERVALS[i],
                 buy_sums[i] / U256::from(10).pow(U256::from(TOKEN_DECIMALS)),
