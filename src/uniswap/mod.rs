@@ -11,16 +11,12 @@ use web3::types::{Address, BlockNumber, Bytes, FilterBuilder, Log, U256, U64};
 
 extern crate hex;
 
-// TODO List
-// 1. Notify on telegram if any intervals are breached
-
-// TODO Enhancement List
-// a. Calculate sum while tracking past transactions and subscribing
-// b. `get_sums_for_each_interval` should be running separately outside of subscribe otherwise it will only trigger every time subscribe receives a new event that passes the filter.
-// c. Upgrade `get_sums_for_each_interval` to use latest blockchain block instead of latest transaction recorded in logs
+// TODO: Future Enhancements
+// a. `get_sums_for_each_interval` should be running separately outside of subscribe otherwise it will only trigger every time subscribe receives a new event that passes the filter.
+// b. Upgrade `get_sums_for_each_interval` to use latest blockchain block instead of latest transaction recorded in logs
 
 pub async fn poll() -> web3::contract::Result<()> {
-    let url = environment::get_value("ALCHEMY");
+    let url = environment::get_value("INFURA");
     let transport = web3::transports::WebSocket::new(&url).await?;
     let web3 = web3::Web3::new(transport);
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
@@ -30,11 +26,11 @@ pub async fn poll() -> web3::contract::Result<()> {
         include_bytes!("../build/IUniswapV2Pair.abi"),
     )?;
 
-    println!("Commencing logger");
-    println!("-------------------");
-    println!("Token name    : {}", TOKEN_NAME);
-    println!("Token address : 0x{}", TOKEN_ADDRESS);
-    println!("-------------------");
+    info!("Starting logger");
+    info!("-------------------");
+    info!("Token name    : {}", TOKEN_NAME);
+    info!("Token address : 0x{}", TOKEN_ADDRESS);
+    info!("-------------------");
 
     let mut buy_logs: VecDeque<MinimalTx> = VecDeque::new();
     let mut sell_logs: VecDeque<MinimalTx> = VecDeque::new();
@@ -50,14 +46,14 @@ async fn add_past_transactions(
     sell_logs: &mut VecDeque<MinimalTx>,
     web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> web3::contract::Result<()> {
-    println!("1. Querying past events...");
+    info!("1. Querying past events...");
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
     let mut curr_block = web3.eth().block_number().await?;
     let mut from_block = curr_block - U64::from(*INTERVALS.last().unwrap());
 
     // Runs web3 queries in batches of QUERY_BLOCK_INTERVAL (100) transactions
     while from_block < curr_block {
-        println!(".");
+        info!(".");
         let mut to_block = from_block + NUM_BLOCKS_PER_QUERY;
         // To make sure to_block doesn't ever exceed the latest block number. Is this needed though? Hmm..
         if to_block > curr_block {
@@ -90,7 +86,7 @@ async fn subscribe(
     sell_logs: &mut VecDeque<MinimalTx>,
     web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> web3::contract::Result<()> {
-    println!("2. Listening for new events...");
+    info!("2. Listening for new events...");
     let pairs = get_interval_index_pairs();
     let token_eth_pair_address: Address = TOKEN_ETH_PAIR_ADDRESS.parse().unwrap();
     let filter = FilterBuilder::default()
@@ -154,7 +150,6 @@ fn add_and_pop(logs: &mut VecDeque<MinimalTx>, minimal_tx: MinimalTx) {
     }
 }
 
-// TODO task b
 // Calculates the total volume for each interval
 fn get_sums_for_each_interval(logs: &VecDeque<MinimalTx>) -> [U256; NUM_INTERVALS] {
     let mut sums: [U256; NUM_INTERVALS] = [U256::from(0); NUM_INTERVALS];
@@ -163,7 +158,7 @@ fn get_sums_for_each_interval(logs: &VecDeque<MinimalTx>) -> [U256; NUM_INTERVAL
     let mut i = 1;
     let mut j = 0;
     let latest = logs[0];
-    // TODO task c
+    // TODO task b
     // Note that this "latest block" is referring to the last block with a buy / sell transaction
     // instead of the latest blockchain block!
     let latest_block = latest.block;
@@ -214,10 +209,11 @@ fn compare_same_type(
         // If it doesn't print, you can assume the opposite is true i.e. LHS < RHS
         let a_blocks = INTERVALS[*a];
         let b_blocks = INTERVALS[*b];
+        let divisor = b_blocks / a_blocks;
         let a_vol = sums[*a];
-        let b_vol = sums[*b] / U256::from(10).pow(U256::from(b - a));
+        let b_vol = sums[*b] / divisor;
         if a_vol > b_vol {
-            println!(
+            info!(
                 "{0} block {1} ({2} {3}) > {4} block {1} (averaged to {0} blocks, {5} {3})",
                 a_blocks,
                 verb,
@@ -239,7 +235,7 @@ fn compare_diff_type(
         // Note that I'm only printing if buy is > sell because I'm only interested in that lol.
         // If it doesn't print, you can assume the opposite is true i.e. sell > buy.
         if buy_sums[i] > sell_sums[i] {
-            println!(
+            info!(
                 "{0} block buy ({1} {2}) > {0} block sell ({3} {2})",
                 INTERVALS[i],
                 buy_sums[i] / U256::from(10).pow(U256::from(TOKEN_DECIMALS)),
