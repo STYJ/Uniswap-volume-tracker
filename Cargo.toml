@@ -1,5 +1,5 @@
 [package]
-name = "tracing_money"
+name = "uniswap-volume-tracker"
 version = "0.1.0"
 authors = ["Simon <simon.tan.yu.jing@gmail.com>"]
 edition = "2018"
